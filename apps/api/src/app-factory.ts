@@ -44,7 +44,6 @@ export const nestApplicationOptions = {
   abortOnError: false,
   bodyParser: false,
   bufferLogs: true,
-  logger: false,
 } as const;
 
 export function configureApplication(app: INestApplication): INestApplication {
