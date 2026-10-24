@@ -3,7 +3,6 @@ import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   Inject,
   Injectable,
-  Logger,
   ServiceUnavailableException,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -15,6 +14,7 @@ import type { Environment } from "../config/environment";
 import { FootballProviderEntityService } from "../football/football-provider-entity.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { VercelQueuePublisher } from "../platform/queue/vercel-queue.publisher";
+import { writeStructuredLog } from "../common/http/structured-log";
 
 type DataRow = Record<string, unknown>;
 
@@ -27,8 +27,6 @@ function secureEqual(actual: string, expected: string): boolean {
 
 @Injectable()
 export class NewsCronService {
-  private readonly logger = new Logger("NewsCron");
-
   constructor(
     @Inject(ConfigService) private readonly config: ConfigService<Environment, true>,
     @Inject(SupabaseAdminService) private readonly supabase: SupabaseAdminService,
@@ -41,7 +39,7 @@ export class NewsCronService {
   async enqueue(authorization?: string) {
     this.authorize(authorization);
     const startedAt = performance.now();
-    this.logger.log({ event: "run_started" });
+    writeStructuredLog("info", "NewsCron", { event: "run_started" });
     const ownerToken = randomUUID();
     const client = this.supabase.getClient();
     const { data: acquired, error: lockError } = await client.rpc("try_acquire_cron_lock", {
@@ -50,11 +48,15 @@ export class NewsCronService {
       p_ttl_seconds: 300,
     });
     if (lockError) {
-      this.logger.error({ error: lockError.message, event: "run_failed", stage: "acquire_lock" });
+      writeStructuredLog("error", "NewsCron", {
+        error: lockError.message,
+        event: "run_failed",
+        stage: "acquire_lock",
+      });
       this.unavailable();
     }
     if (!acquired) {
-      this.logger.warn({ event: "run_skipped", reason: "lock_held" });
+      writeStructuredLog("warn", "NewsCron", { event: "run_skipped", reason: "lock_held" });
       return { enqueued: 0, fanoutsReconciled: 0, purged: 0, skipped: true };
     }
 
@@ -122,14 +124,14 @@ export class NewsCronService {
       }
       const fanoutsReconciled = await this.reconcileNewsFanouts();
       const { data: purged, error: purgeError } = await client.rpc("purge_expired_news");
-      if (purgeError) this.logger.warn({ error: purgeError.message });
+      if (purgeError) writeStructuredLog("warn", "NewsCron", { error: purgeError.message });
       const result = {
         enqueued,
         fanoutsReconciled,
         purged: Number(purged ?? 0),
         skipped: false,
       };
-      this.logger.log({
+      writeStructuredLog("info", "NewsCron", {
         ...result,
         durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
         event: "run_completed",
@@ -137,7 +139,7 @@ export class NewsCronService {
       });
       return result;
     } catch (cause) {
-      this.logger.error({
+      writeStructuredLog("error", "NewsCron", {
         durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
         error: cause instanceof Error ? cause.message : "Unknown news cron error",
         event: "run_failed",
@@ -148,7 +150,12 @@ export class NewsCronService {
         p_lock_key: "cron:news-ingestion",
         p_owner_token: ownerToken,
       });
-      if (error) this.logger.error({ error: error.message, event: "lock_release_failed" });
+      if (error) {
+        writeStructuredLog("error", "NewsCron", {
+          error: error.message,
+          event: "lock_release_failed",
+        });
+      }
     }
   }
 
@@ -169,7 +176,7 @@ export class NewsCronService {
         await this.notifications.stageNewsNotifications(String(row.id));
         queued += 1;
       } catch (cause) {
-        this.logger.warn({
+        writeStructuredLog("warn", "NewsCron", {
           articleId: row.id,
           error:
             cause instanceof Error ? cause.message : "Unknown notification reconciliation error",

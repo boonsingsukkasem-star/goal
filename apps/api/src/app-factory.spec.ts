@@ -38,17 +38,17 @@ describe("API production foundation", () => {
     });
   });
 
-  it("writes structured Nest logs through console for Vercel capture", () => {
+  it("configures Nest's JSON logger to write through console", () => {
     const consoleLog = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
-    createApplicationLogger("info", false).log({ event: "vercel_console_capture" }, "LoggingProbe");
+    createApplicationLogger("info", false).log({ event: "logger_capture_check" }, "ApiLogger");
 
-    expect(consoleLog).toHaveBeenCalledOnce();
     expect(JSON.parse(String(consoleLog.mock.calls[0]?.[0]))).toMatchObject({
-      context: "LoggingProbe",
+      context: "ApiLogger",
       level: "log",
-      message: { event: "vercel_console_capture" },
+      message: { event: "logger_capture_check" },
     });
+    expect(consoleLog).toHaveBeenCalledOnce();
 
     consoleLog.mockRestore();
   });

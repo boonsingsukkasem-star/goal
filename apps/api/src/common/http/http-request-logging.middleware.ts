@@ -1,17 +1,16 @@
-import { Injectable, Logger, type NestMiddleware } from "@nestjs/common";
+import { Injectable, type NestMiddleware } from "@nestjs/common";
 import type { NextFunction, Request, Response } from "express";
 
 import type { RequestWithContext } from "./request-context";
+import { writeStructuredLog } from "./structured-log";
 
 @Injectable()
 export class HttpRequestLoggingMiddleware implements NestMiddleware {
-  private readonly logger = new Logger("HTTP");
-
   use(request: Request, response: Response, next: NextFunction): void {
     const startedAt = performance.now();
     const requestWithContext = request as RequestWithContext;
 
-    this.logger.log({
+    writeStructuredLog("info", "HTTP", {
       event: "request_started",
       method: request.method,
       path: request.path,
@@ -34,11 +33,11 @@ export class HttpRequestLoggingMiddleware implements NestMiddleware {
       };
 
       if (status >= 500) {
-        this.logger.error(details);
+        writeStructuredLog("error", "HTTP", details);
       } else if (status >= 400) {
-        this.logger.warn(details);
+        writeStructuredLog("warn", "HTTP", details);
       } else {
-        this.logger.log(details);
+        writeStructuredLog("info", "HTTP", details);
       }
     });
 

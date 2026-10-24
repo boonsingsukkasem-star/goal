@@ -19,7 +19,11 @@ const environmentSchema = z
           .filter(Boolean)
           // Vercel's VERCEL_URL is a hostname without a scheme. Treat bare
           // hostnames in CORS_ORIGINS as HTTPS origins for production deploys.
-          .map((origin) => (origin.includes("://") ? origin : `https://${origin}`)),
+          .map((origin) =>
+            !origin.includes("://") && /^(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d+)?$/i.test(origin)
+              ? `https://${origin}`
+              : origin,
+          ),
       )
       .pipe(z.array(z.url()).min(1)),
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
+import { Inject, Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { newsIngestionJobSchema, type QueueJobData } from "@goal-app/jobs";
 
@@ -7,6 +7,7 @@ import type { Environment } from "../config/environment";
 import { NotificationsService } from "../notifications/notifications.service";
 import { RuntimeCacheService } from "../platform/cache/runtime-cache.service";
 import { OpenAiNewsService } from "./openai-news.service";
+import { writeStructuredLog } from "../common/http/structured-log";
 
 type NewsJob = QueueJobData["news-ingestion"];
 type DataRow = Record<string, unknown>;
@@ -18,7 +19,6 @@ export interface NewsQueueMetadata {
 
 @Injectable()
 export class NewsIngestionService {
-  private readonly logger = new Logger("NewsIngestion");
   constructor(
     @Inject(ConfigService) private readonly config: ConfigService<Environment, true>,
     @Inject(SupabaseAdminService) private readonly supabase: SupabaseAdminService,
@@ -37,7 +37,7 @@ export class NewsIngestionService {
     );
     if (processedError) this.unavailable();
     if (processed) {
-      this.logger.log({
+      writeStructuredLog("info", "NewsIngestion", {
         event: "job_skipped",
         messageId: metadata.messageId,
         reason: "already_processed",
@@ -61,7 +61,7 @@ export class NewsIngestionService {
           outcome: reservation.outcome,
         });
       }
-      this.logger.log({
+      writeStructuredLog("info", "NewsIngestion", {
         event: "job_skipped",
         messageId: metadata.messageId,
         outcome: reservation.outcome,
@@ -70,7 +70,7 @@ export class NewsIngestionService {
       return;
     }
 
-    this.logger.log({
+    writeStructuredLog("info", "NewsIngestion", {
       correlationId: job.correlationId,
       deliveryCount: metadata.deliveryCount,
       event: "job_started",
@@ -95,14 +95,14 @@ export class NewsIngestionService {
       });
       if (completeError) this.unavailable();
       await this.cache.expireTag("news").catch((cause: unknown) =>
-        this.logger.warn({
+        writeStructuredLog("warn", "NewsIngestion", {
           error: cause instanceof Error ? cause.message : "Unknown cache invalidation error",
           status: "bounded_by_cache_ttl",
         }),
       );
       for (const articleId of articleIds) {
         await this.notifications.stageNewsNotifications(articleId).catch((cause: unknown) =>
-          this.logger.warn({
+          writeStructuredLog("warn", "NewsIngestion", {
             articleId,
             error: cause instanceof Error ? cause.message : "Unknown notification fanout error",
             status: "cron_reconciliation_pending",
@@ -113,7 +113,7 @@ export class NewsIngestionService {
         articleCount: articleIds.length,
         outcome: "completed",
       });
-      this.logger.log({
+      writeStructuredLog("info", "NewsIngestion", {
         articleCount: articleIds.length,
         correlationId: job.correlationId,
         deliveryCount: metadata.deliveryCount,
@@ -128,7 +128,7 @@ export class NewsIngestionService {
         p_correlation_id: job.correlationId,
         p_error_code: cause instanceof Error ? cause.message : "UNKNOWN_ERROR",
       });
-      this.logger.error({
+      writeStructuredLog("error", "NewsIngestion", {
         correlationId: job.correlationId,
         deliveryCount: metadata.deliveryCount,
         durationMs: Math.round((performance.now() - startedAt) * 100) / 100,

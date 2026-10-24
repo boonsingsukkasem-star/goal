@@ -1,15 +1,18 @@
-import { Logger } from "@nestjs/common";
 import type { NextFunction, Request, Response } from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HttpRequestLoggingMiddleware } from "./http-request-logging.middleware";
 
 describe("HttpRequestLoggingMiddleware", () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
 
   it("logs start and completion details, including unmatched routes", () => {
-    const log = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
-    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    vi.stubEnv("LOG_LEVEL", "info");
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const on = vi.fn((_event: string, callback: () => void) => callback);
     const getHeader = vi.fn((name: string) =>
       name === "content-length" ? "42" : "application/json; charset=utf-8",
@@ -28,11 +31,15 @@ describe("HttpRequestLoggingMiddleware", () => {
 
     new HttpRequestLoggingMiddleware().use(request, response, next);
 
-    expect(log).toHaveBeenCalledWith({
-      event: "request_started",
-      method: "GET",
-      path: "/",
-      requestId: "request-123",
+    expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toMatchObject({
+      context: "HTTP",
+      level: "info",
+      message: {
+        event: "request_started",
+        method: "GET",
+        path: "/",
+        requestId: "request-123",
+      },
     });
     expect(next).toHaveBeenCalledOnce();
 
@@ -40,8 +47,10 @@ describe("HttpRequestLoggingMiddleware", () => {
     expect(finish).toBeTypeOf("function");
     finish?.();
 
-    expect(warn).toHaveBeenLastCalledWith(
-      expect.objectContaining({
+    expect(JSON.parse(String(warn.mock.calls[0]?.[0]))).toMatchObject({
+      context: "HTTP",
+      level: "warn",
+      message: {
         contentLength: 42,
         contentType: "application/json; charset=utf-8",
         event: "request_completed",
@@ -49,7 +58,7 @@ describe("HttpRequestLoggingMiddleware", () => {
         path: "/",
         requestId: "request-123",
         status: 404,
-      }),
-    );
+      },
+    });
   });
 });
