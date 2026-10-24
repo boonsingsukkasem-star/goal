@@ -40,6 +40,8 @@ export class NewsCronService {
 
   async enqueue(authorization?: string) {
     this.authorize(authorization);
+    const startedAt = performance.now();
+    this.logger.log({ event: "run_started" });
     const ownerToken = randomUUID();
     const client = this.supabase.getClient();
     const { data: acquired, error: lockError } = await client.rpc("try_acquire_cron_lock", {
@@ -47,8 +49,14 @@ export class NewsCronService {
       p_owner_token: ownerToken,
       p_ttl_seconds: 300,
     });
-    if (lockError) this.unavailable();
-    if (!acquired) return { enqueued: 0, fanoutsReconciled: 0, purged: 0, skipped: true };
+    if (lockError) {
+      this.logger.error({ error: lockError.message, event: "run_failed", stage: "acquire_lock" });
+      this.unavailable();
+    }
+    if (!acquired) {
+      this.logger.warn({ event: "run_skipped", reason: "lock_held" });
+      return { enqueued: 0, fanoutsReconciled: 0, purged: 0, skipped: true };
+    }
 
     try {
       const maxTopics = this.config.get("NEWS_MAX_TOPICS_PER_RUN", { infer: true });
@@ -115,18 +123,32 @@ export class NewsCronService {
       const fanoutsReconciled = await this.reconcileNewsFanouts();
       const { data: purged, error: purgeError } = await client.rpc("purge_expired_news");
       if (purgeError) this.logger.warn({ error: purgeError.message });
-      return {
+      const result = {
         enqueued,
         fanoutsReconciled,
         purged: Number(purged ?? 0),
         skipped: false,
       };
+      this.logger.log({
+        ...result,
+        durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+        event: "run_completed",
+        topicsSelected: topics.length,
+      });
+      return result;
+    } catch (cause) {
+      this.logger.error({
+        durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+        error: cause instanceof Error ? cause.message : "Unknown news cron error",
+        event: "run_failed",
+      });
+      throw cause;
     } finally {
       const { error } = await client.rpc("release_cron_lock", {
         p_lock_key: "cron:news-ingestion",
         p_owner_token: ownerToken,
       });
-      if (error) this.logger.error({ error: error.message, ownerToken });
+      if (error) this.logger.error({ error: error.message, event: "lock_release_failed" });
     }
   }
 

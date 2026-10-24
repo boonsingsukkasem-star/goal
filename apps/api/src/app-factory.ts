@@ -12,7 +12,6 @@ import helmet from "helmet";
 
 import { AppModule } from "./app.module";
 import { ApiExceptionFilter } from "./common/http/api-exception.filter";
-import { HttpLoggingInterceptor } from "./common/http/http-logging.interceptor";
 import { contractOpenApiSchemas } from "./common/openapi/contract-schemas";
 import type { Environment } from "./config/environment";
 
@@ -72,7 +71,6 @@ export function configureApplication(app: INestApplication): INestApplication {
   app.enableShutdownHooks();
   app.enableVersioning({ defaultVersion: "1", type: VersioningType.URI });
   app.useGlobalFilters(new ApiExceptionFilter());
-  app.useGlobalInterceptors(new HttpLoggingInterceptor());
   app.useGlobalPipes(
     new ValidationPipe({
       forbidNonWhitelisted: true,

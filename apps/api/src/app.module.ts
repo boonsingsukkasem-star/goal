@@ -1,8 +1,9 @@
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
-import { RequestIdMiddleware } from "./common/http/request-id.middleware";
 import { AuthModule } from "./auth/auth.module";
+import { HttpRequestLoggingMiddleware } from "./common/http/http-request-logging.middleware";
+import { RequestIdMiddleware } from "./common/http/request-id.middleware";
 import { validateEnvironment } from "./config/environment";
 import { HealthController } from "./health/health.controller";
 import { FootballModule } from "./football/football.module";
@@ -34,6 +35,6 @@ import { NewsModule } from "./news/news.module";
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestIdMiddleware).forRoutes("*");
+    consumer.apply(RequestIdMiddleware, HttpRequestLoggingMiddleware).forRoutes("*");
   }
 }

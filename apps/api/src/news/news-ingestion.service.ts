@@ -28,6 +28,7 @@ export class NewsIngestionService {
   ) {}
 
   async process(job: NewsJob, metadata: NewsQueueMetadata): Promise<void> {
+    const startedAt = performance.now();
     const idempotencyKey = `news-ingestion:${job.correlationId}`;
     const client = this.supabase.getClient();
     const { data: processed, error: processedError } = await client.rpc(
@@ -35,7 +36,14 @@ export class NewsIngestionService {
       { p_idempotency_key: idempotencyKey, p_message_id: metadata.messageId },
     );
     if (processedError) this.unavailable();
-    if (processed) return;
+    if (processed) {
+      this.logger.log({
+        event: "job_skipped",
+        messageId: metadata.messageId,
+        reason: "already_processed",
+      });
+      return;
+    }
 
     const { data, error } = await client.rpc("reserve_news_ingestion", {
       p_correlation_id: job.correlationId,
@@ -53,8 +61,23 @@ export class NewsIngestionService {
           outcome: reservation.outcome,
         });
       }
+      this.logger.log({
+        event: "job_skipped",
+        messageId: metadata.messageId,
+        outcome: reservation.outcome,
+        reason: "reservation_denied",
+      });
       return;
     }
+
+    this.logger.log({
+      correlationId: job.correlationId,
+      deliveryCount: metadata.deliveryCount,
+      event: "job_started",
+      language: job.language,
+      messageId: metadata.messageId,
+      topicKey: job.topicKey,
+    });
 
     try {
       const articles = await this.openai.research(job);
@@ -90,10 +113,29 @@ export class NewsIngestionService {
         articleCount: articleIds.length,
         outcome: "completed",
       });
+      this.logger.log({
+        articleCount: articleIds.length,
+        correlationId: job.correlationId,
+        deliveryCount: metadata.deliveryCount,
+        durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+        event: "job_completed",
+        language: job.language,
+        messageId: metadata.messageId,
+        topicKey: job.topicKey,
+      });
     } catch (cause) {
       await client.rpc("fail_news_ingestion", {
         p_correlation_id: job.correlationId,
         p_error_code: cause instanceof Error ? cause.message : "UNKNOWN_ERROR",
+      });
+      this.logger.error({
+        correlationId: job.correlationId,
+        deliveryCount: metadata.deliveryCount,
+        durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+        error: cause instanceof Error ? cause.message : "Unknown news ingestion error",
+        event: "job_failed",
+        messageId: metadata.messageId,
+        topicKey: job.topicKey,
       });
       throw cause;
     }
