@@ -38,6 +38,23 @@ describe("validateEnvironment", () => {
     expect(environment.NEWS_SYSTEM_DAILY_LIMIT).toBe(100);
   });
 
+  it("normalizes a bare Vercel hostname to an HTTPS CORS origin", () => {
+    const environment = validateEnvironment({
+      APP_ENV: "prod",
+      CORS_ORIGINS: "web-abk3gtajo-boonsingsukkasem-star.vercel.app",
+      CRON_SECRET: "a-production-cron-secret",
+      SUPABASE_URL: "https://goal.supabase.co",
+      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_abcdefghijklmnopqrstuvwxyz",
+      SUPABASE_SECRET_KEY: ["sb", "secret", "abcdefghijklmnopqrstuvwxyz123456"].join("_"),
+      API_FOOTBALL_API_KEY: "api-football-production-token",
+      OPENAI_API_KEY: "openai-production-key-long-enough",
+    });
+
+    expect(environment.CORS_ORIGINS).toEqual([
+      "https://web-abk3gtajo-boonsingsukkasem-star.vercel.app",
+    ]);
+  });
+
   it("allows Swagger to be explicitly enabled", () => {
     const environment = validateEnvironment({
       APP_ENV: "nonprod",
