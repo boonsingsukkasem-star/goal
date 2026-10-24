@@ -1,0 +1,66 @@
+{
+  "name": "goal-app",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.17.1",
+  "engines": {
+    "node": ">=22.22.0",
+    "pnpm": ">=10.17.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "check": "pnpm test:security && pnpm test:secrets && pnpm test:swagger-dev && pnpm orval:check && turbo run lint typecheck test build && pnpm test:artifact",
+    "audit:prod": "pnpm audit --prod --ignore CVE-2025-71329 --ignore CVE-2025-71330",
+    "dev": "turbo run dev --parallel",
+    "dev:api": "turbo run dev --filter=@goal-app/api",
+    "news:run": "node --env-file-if-exists=apps/api/.env scripts/run-news-cron.mjs",
+    "dev:mobile": "turbo run dev --filter=@goal-app/mobile",
+    "dev:web": "turbo run dev --filter=@goal-app/web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "turbo run lint",
+    "openapi:generate": "pnpm --filter @goal-app/contracts build && pnpm --filter @goal-app/jobs build && pnpm --filter @goal-app/api openapi:generate",
+    "orval:generate": "pnpm openapi:generate && orval --config orval.config.ts",
+    "orval:check": "node scripts/check-orval-generated.mjs",
+    "test": "turbo run test",
+    "test:artifact": "node scripts/smoke-api-artifact.mjs",
+    "test:secrets": "node scripts/scan-secrets.mjs",
+    "test:security": "node scripts/verify-image-size-patch.mjs",
+    "test:swagger-dev": "pnpm --filter @goal-app/api test:swagger-dev",
+    "typecheck": "turbo run typecheck",
+    "db:migrations": "supabase migration list --linked",
+    "db:plan": "supabase db push --linked --dry-run",
+    "db:migrate": "supabase db push --linked",
+    "db:test": "node scripts/test-cloud-database.mjs"
+  },
+  "pnpm": {
+    "overrides": {
+      "js-yaml": "5.2.2",
+      "orval>js-yaml": "4.3.1",
+      "uuid": "11.1.1"
+    },
+    "patchedDependencies": {
+      "image-size@1.2.1": "patches/image-size@1.2.1.patch"
+    },
+    "auditConfig": {
+      "ignoreCves": [
+        "CVE-2025-71329",
+        "CVE-2025-71330"
+      ]
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "26.2.0",
+    "eas-cli": "22.0.0",
+    "eslint": "9.39.5",
+    "orval": "8.24.0",
+    "prettier": "3.9.6",
+    "supabase": "2.114.0",
+    "tsup": "8.5.1",
+    "turbo": "2.10.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0",
+    "vitest": "4.1.10"
+  }
+}

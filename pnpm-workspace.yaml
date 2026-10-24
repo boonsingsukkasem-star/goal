@@ -1,0 +1,17 @@
+packages:
+  - apps/*
+  - packages/*
+
+useNodeVersion: 22.22.0
+nodeVersion: 22.22.0
+engineStrict: true
+
+onlyBuiltDependencies:
+  - esbuild
+  - msgpackr-extract
+  - supabase
+  - unrs-resolver
+
+ignoredBuiltDependencies:
+  - "@scarf/scarf"
+  - dtrace-provider

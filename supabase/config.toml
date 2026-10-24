@@ -1,0 +1,9 @@
+# CLI metadata for migrations to a linked Supabase Cloud project.
+# Database, Auth, Storage, and redirect settings are managed in its Dashboard.
+project_id = "goal"
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = false

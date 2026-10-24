@@ -1,0 +1,83 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/v1/internal/cron/auth-retention",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/v1/internal/cron/ai-outbox",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/v1/internal/cron/football-live",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/v1/internal/cron/football-fixtures",
+      "schedule": "15 0 * * *"
+    },
+    {
+      "path": "/v1/internal/cron/football-standings",
+      "schedule": "45 0 * * *"
+    },
+    {
+      "path": "/v1/internal/cron/notifications",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/v1/internal/cron/news",
+      "schedule": "*/15 * * * *"
+    }
+  ],
+  "functions": {
+    "api/ai-analysis.ts": {
+      "maxDuration": 300,
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "ai-analysis",
+          "retryAfterSeconds": 30,
+          "initialDelaySeconds": 0,
+          "maxConcurrency": 2
+        }
+      ]
+    },
+    "api/football-sync.ts": {
+      "maxDuration": 300,
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "football-sync",
+          "retryAfterSeconds": 30,
+          "initialDelaySeconds": 0,
+          "maxConcurrency": 3
+        }
+      ]
+    },
+    "api/notifications.ts": {
+      "maxDuration": 120,
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "notifications",
+          "retryAfterSeconds": 30,
+          "initialDelaySeconds": 0,
+          "maxConcurrency": 5
+        }
+      ]
+    },
+    "api/news-ingestion.ts": {
+      "maxDuration": 300,
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "news-ingestion",
+          "retryAfterSeconds": 30,
+          "initialDelaySeconds": 0,
+          "maxConcurrency": 2
+        }
+      ]
+    }
+  }
+}

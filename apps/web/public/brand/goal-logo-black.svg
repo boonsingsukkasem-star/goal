@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">GOAL</title>
+  <desc id="description">White GOAL logo centered on a black background</desc>
+  <rect width="1200" height="630" fill="#000000"/>
+  <g fill="#FFFFFF" transform="translate(301 207) scale(3) translate(10 2) skewX(-8)">
+    <path d="M21 2h23v13H23c-5 0-7 3-7 10v21c0 7 2 10 7 10h8V44H22V32h23v36H21C9 68 3 60 3 47V23C3 10 9 2 21 2Z"/>
+    <path fill-rule="evenodd" d="M69 2h5c13 0 20 8 20 22v22c0 14-7 22-20 22h-5c-13 0-20-8-20-22V24C49 10 56 2 69 2Zm2 13c-6 0-8 3-8 10v20c0 7 2 10 8 10h1c6 0 8-3 8-10V25c0-7-2-10-8-10h-1Z" clip-rule="evenodd"/>
+    <path fill-rule="evenodd" d="M106 2h19l16 66h-15l-3-14h-16l-3 14H90l16-66Zm4 40h11l-5-27h-1l-5 27Z" clip-rule="evenodd"/>
+    <path d="M144 2h15v53h27v13h-42V2Z"/>
+  </g>
+</svg>
