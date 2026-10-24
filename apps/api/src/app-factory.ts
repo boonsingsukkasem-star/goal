@@ -40,13 +40,14 @@ export function createOpenApiDocument(app: INestApplication, version: string) {
   return document;
 }
 
-export async function createApplication(): Promise<INestApplication> {
-  const app = await NestFactory.create(AppModule, {
-    abortOnError: false,
-    bodyParser: false,
-    bufferLogs: true,
-    logger: false,
-  });
+export const nestApplicationOptions = {
+  abortOnError: false,
+  bodyParser: false,
+  bufferLogs: true,
+  logger: false,
+} as const;
+
+export function configureApplication(app: INestApplication): INestApplication {
   const config = app.get<ConfigService<Environment, true>>(ConfigService);
 
   app.useLogger(
@@ -90,4 +91,9 @@ export async function createApplication(): Promise<INestApplication> {
   }
 
   return app;
+}
+
+export async function createApplication(): Promise<INestApplication> {
+  const app = await NestFactory.create(AppModule, nestApplicationOptions);
+  return configureApplication(app);
 }

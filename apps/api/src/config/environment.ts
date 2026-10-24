@@ -156,25 +156,12 @@ const environmentSchema = z
           path: ["CRON_SECRET"],
         });
       }
-      if (config.AI_AUTO_LEAGUE_IDS.length === 0) {
-        context.addIssue({
-          code: "custom",
-          message: "Production requires AI_AUTO_LEAGUE_IDS for bounded automatic analysis",
-          path: ["AI_AUTO_LEAGUE_IDS"],
-        });
-      }
-
       for (const key of [
         "SUPABASE_URL",
         "SUPABASE_PUBLISHABLE_KEY",
         "SUPABASE_SECRET_KEY",
         "API_FOOTBALL_API_KEY",
         "OPENAI_API_KEY",
-        "EXPO_PUSH_ACCESS_TOKEN",
-        "APPLE_CLIENT_ID",
-        "APPLE_TEAM_ID",
-        "APPLE_KEY_ID",
-        "APPLE_PRIVATE_KEY_BASE64",
       ] as const) {
         if (!config[key]) {
           context.addIssue({

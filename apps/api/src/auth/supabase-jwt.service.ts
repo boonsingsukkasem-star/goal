@@ -1,10 +1,11 @@
 import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
+import type { JWTVerifyGetKey } from "jose";
 import { z } from "zod";
 
 import type { Environment } from "../config/environment";
 import type { AuthPrincipal } from "./auth-principal";
+import { loadJose } from "./jose-runtime";
 
 const claimsSchema = z.object({
   app_metadata: z
@@ -19,22 +20,25 @@ const claimsSchema = z.object({
 @Injectable()
 export class SupabaseJwtService {
   private readonly issuer: string | null;
-  private readonly jwks: JWTVerifyGetKey | null;
+  private readonly jwksUrl: URL | null;
+  private jwks: JWTVerifyGetKey | null = null;
 
   constructor(@Inject(ConfigService) config: ConfigService<Environment, true>) {
     const url = config.get("SUPABASE_URL", { infer: true });
     this.issuer = url ? `${url.replace(/\/$/, "")}/auth/v1` : null;
-    this.jwks = this.issuer
-      ? createRemoteJWKSet(new URL(`${this.issuer}/.well-known/jwks.json`))
+    this.jwksUrl = this.issuer
+      ? new URL(`${this.issuer}/.well-known/jwks.json`)
       : null;
   }
 
   async verify(token: string): Promise<AuthPrincipal> {
-    if (!this.issuer || !this.jwks) {
+    if (!this.issuer || !this.jwksUrl) {
       throw new UnauthorizedException("Authentication is not configured");
     }
 
     try {
+      const { createRemoteJWKSet, jwtVerify } = await loadJose();
+      this.jwks ??= createRemoteJWKSet(this.jwksUrl);
       const { payload } = await jwtVerify(token, this.jwks, {
         audience: "authenticated",
         issuer: this.issuer,

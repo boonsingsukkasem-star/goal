@@ -1,11 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { createRemoteJWKSet, importPKCS8, jwtVerify, SignJWT } from "jose";
+import type { JWTVerifyGetKey } from "jose";
 
 import type { Environment } from "../config/environment";
+import { loadJose } from "./jose-runtime";
 
 type RevocationResult = "succeeded" | "unavailable" | "failed";
-const appleJwks = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
+let appleJwks: JWTVerifyGetKey | undefined;
 
 @Injectable()
 export class AppleTokenRevocationService {
@@ -24,6 +25,8 @@ export class AppleTokenRevocationService {
     if (!clientId || !teamId || !keyId || !encodedKey) return "unavailable";
 
     try {
+      const { createRemoteJWKSet, importPKCS8, jwtVerify, SignJWT } = await loadJose();
+      appleJwks ??= createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
       const privateKey = await importPKCS8(
         Buffer.from(encodedKey, "base64").toString("utf8"),
         "ES256",

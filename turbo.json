@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalEnv": ["GOAL_API_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build", "typecheck"],

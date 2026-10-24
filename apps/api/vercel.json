@@ -7,11 +7,11 @@
     },
     {
       "path": "/v1/internal/cron/ai-outbox",
-      "schedule": "* * * * *"
+      "schedule": "0 4 * * *"
     },
     {
       "path": "/v1/internal/cron/football-live",
-      "schedule": "* * * * *"
+      "schedule": "0 5 * * *"
     },
     {
       "path": "/v1/internal/cron/football-fixtures",
@@ -23,11 +23,11 @@
     },
     {
       "path": "/v1/internal/cron/notifications",
-      "schedule": "* * * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/v1/internal/cron/news",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 7 * * *"
     }
   ],
   "functions": {

@@ -57,14 +57,21 @@ describe("validateEnvironment", () => {
     ).toThrow();
   });
 
-  it("requires Supabase and Apple server credentials in prod", () => {
-    expect(() =>
-      validateEnvironment({
-        APP_ENV: "prod",
-        CORS_ORIGINS: "https://goal.co.th",
-        CRON_SECRET: "a-production-cron-secret",
-      }),
-    ).toThrow();
+  it("allows optional AI league, push, and Apple revocation integrations to be disabled in prod", () => {
+    const environment = validateEnvironment({
+      APP_ENV: "prod",
+      CORS_ORIGINS: "https://goal.co.th",
+      CRON_SECRET: "a-production-cron-secret",
+      SUPABASE_URL: "https://goal.supabase.co",
+      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_abcdefghijklmnopqrstuvwxyz",
+      SUPABASE_SECRET_KEY: ["sb", "secret", "abcdefghijklmnopqrstuvwxyz123456"].join("_"),
+      API_FOOTBALL_API_KEY: "api-football-production-token",
+      OPENAI_API_KEY: "openai-production-key-long-enough",
+    });
+
+    expect(environment.AI_AUTO_LEAGUE_IDS).toEqual([]);
+    expect(environment.EXPO_PUSH_ACCESS_TOKEN).toBeUndefined();
+    expect(environment.APPLE_TEAM_ID).toBeUndefined();
   });
 
   it("requires new-format Supabase keys in prod", () => {
