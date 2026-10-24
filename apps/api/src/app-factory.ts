@@ -22,6 +22,19 @@ const logLevels = {
   warn: ["fatal", "error", "warn"],
 } as const;
 
+export function createApplicationLogger(
+  level: Environment["LOG_LEVEL"],
+  isNonprod: boolean,
+): ConsoleLogger {
+  return new ConsoleLogger({
+    colors: isNonprod,
+    compact: true,
+    forceConsole: true,
+    json: true,
+    logLevels: [...logLevels[level]],
+  });
+}
+
 export function createOpenApiDocument(app: INestApplication, version: string) {
   const swaggerConfig = new DocumentBuilder()
     .setTitle("Goal API")
@@ -49,12 +62,10 @@ export function configureApplication(app: INestApplication): INestApplication {
   const config = app.get<ConfigService<Environment, true>>(ConfigService);
 
   app.useLogger(
-    new ConsoleLogger({
-      colors: config.get("APP_ENV", { infer: true }) === "nonprod",
-      compact: true,
-      json: true,
-      logLevels: [...logLevels[config.get("LOG_LEVEL", { infer: true })]],
-    }),
+    createApplicationLogger(
+      config.get("LOG_LEVEL", { infer: true }),
+      config.get("APP_ENV", { infer: true }) === "nonprod",
+    ),
   );
 
   if (config.get("TRUST_PROXY", { infer: true })) {

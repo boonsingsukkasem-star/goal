@@ -1,8 +1,8 @@
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { createApplication } from "./app-factory";
+import { createApplication, createApplicationLogger } from "./app-factory";
 
 describe("API production foundation", () => {
   let app: INestApplication;
@@ -36,5 +36,20 @@ describe("API production foundation", () => {
         requestId: response.headers["x-request-id"],
       },
     });
+  });
+
+  it("writes structured Nest logs through console for Vercel capture", () => {
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    createApplicationLogger("info", false).log({ event: "vercel_console_capture" }, "LoggingProbe");
+
+    expect(consoleLog).toHaveBeenCalledOnce();
+    expect(JSON.parse(String(consoleLog.mock.calls[0]?.[0]))).toMatchObject({
+      context: "LoggingProbe",
+      level: "log",
+      message: { event: "vercel_console_capture" },
+    });
+
+    consoleLog.mockRestore();
   });
 });
